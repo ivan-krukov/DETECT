@@ -10,7 +10,7 @@ This is the python implementation that includes several optimizations compared t
 Improvements mainly include lowering the nubmer of file system operations and using an SQLite database for density estimation tables.
 
 ##Dependencies###
-+<a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download">NCBI BLAST</a>
-+<a href="http://emboss.sourceforge.net/download/">EMBOSS suite</a>
-+<a href="http://www.sqlite.org/download.html">SQLite3</a>
-+<a href="http://www.python.org/">python2.7.3</a>
++ <a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download">NCBI BLAST</a>
++ <a href="http://emboss.sourceforge.net/download/">EMBOSS suite</a>
++ <a href="http://www.sqlite.org/download.html">SQLite3</a>
++ <a href="http://www.python.org/">python2.7.3</a>
