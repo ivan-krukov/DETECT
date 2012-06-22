@@ -5,6 +5,7 @@ import subprocess
 import os
 import sqlite3  
 from string import whitespace
+from sys import stdout
 from argparse import ArgumentParser
 from operator import itemgetter
 from collections import defaultdict, OrderedDict
@@ -68,7 +69,7 @@ class Hypothesis:
 		self.probability= 0.0
 
 zero_density = 1e-10
-"""A small number used as zero"""
+"""Small number that is used as zero"""
 
 def run_pair_alignment (seq, blast_db, e_value_min = 1):
 	"""Core alignment routine.
@@ -268,10 +269,11 @@ if __name__=="__main__":
 	parser = ArgumentParser(description="DETECT - Density Estimation Tool for Enzyme ClassificaTion. Version 2.0. June 2012")
 	
 	parser.add_argument("target_file",type=str,help="Path to the file containing the target FASTA sequence(s)")
-	#parser.add_argument("output_file",type=str,help="Path of the file to contain the output of the predictions")
+	parser.add_argument("--output_file",type=str,help="Path of the file to contain the output of the predictions")
 	parser.add_argument("--query_species",type=str,help="Species of the target organism.")
 	parser.add_argument("--tabular_output",help="Print output in tab-separated form",action="store_true")
 	parser.add_argument("--verbose",help="Print verbose output",action="store_true")
+	parser.add_argument("--sort_output",help="Sort the prediction probabiliites",action="store_true")
 	
 	args = parser.parse_args()
 
@@ -299,22 +301,26 @@ if __name__=="__main__":
 				del identification.predictions[ec]
 		
 		#sort dict by values	
-		identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
+		if (args.sort_output):
+			identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
 		
 		final_predictions.append(identification)
 	
-		
+	if (args.output_file):	
+		output = open(args.output_file,"w")
+	else:
+		output = stdout
 	if args.tabular_output:
-		print "# ID\tEC\tprobability #"
+		output.write("# ID\tEC\tprobability #\n")
 		for identification in final_predictions:
 			for ec in identification.predictions:
-				print "{seq_id}\t{pred_ec}\t{prob:.3e}".format(seq_id=identification.query_id,pred_ec=ec,prob=identification.predictions[ec])
+				output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\n".format(seq_id=identification.query_id,pred_ec=ec,prob=identification.predictions[ec]))
 	else:
 		for identification in final_predictions:
-			print "DETECT predictions for {}:".format(identification.query_id)
-			print "Predicted EC number:  |  Cumulative probability of identification:"
+			output.write("DETECT predictions for {}:\n".format(identification.query_id))
+			output.write("Predicted EC number:  |  Cumulative probability of identification:\n")
 			for ec in identification.predictions:
-				print "{pred_ec:^20}  |  {prob:^42.3e}".format(pred_ec=ec,prob=identification.predictions[ec])
+				output.write("{pred_ec:^20}  |  {prob:^42.3e}\n".format(pred_ec=ec,prob=identification.predictions[ec]))
 
-			
+	output.close()	
 	connection.close()
