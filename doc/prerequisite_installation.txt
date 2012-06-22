@@ -1,0 +1,21 @@
+Installation instructions:
+
+DETECT has 2 prerequisites:
+	1) NCBI BLAST +
+		This package can be installed from:
+		ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
+		Original was tested against ncbi-blast-2.2.26+
+	2) EMBOSS Suite
+		Available at:
+		http://emboss.sourceforge.net/download/
+		Original was tested against EMBOSS-6.4.0
+
+Installation:
+	1)
+	2) The EMBOSS suite will have to be compiled from source. On a Unix-like system, follow these steps:
+		tar xvzf EMBOSS-6.4.0
+		cd EMBOSS-6.4.0
+		./configure
+		make
+	Otherwise, follow the official installation instructions at http://emboss.sourceforge.net/download/
+	
