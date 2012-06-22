@@ -71,7 +71,7 @@ verbose=False
 zero_density = 1e-10
 """Small number that is used as zero"""
 
-def run_pair_alignment (seq, blast_db, e_value_min = 1, bitscore_cutoff = 50.0):
+def run_pair_alignment (seq, blast_db, num_threads = 1, e_value_min = 1, bitscore_cutoff = 50.0):
 	"""Core alignment routine.
 	1) Takes a single sequence, acquires multiple BLASTp alignemnts to the swissprot enzyme database.
 	2) Canonical sequences of the resutls from (1) are retrieved with blastdbcmd
@@ -80,20 +80,19 @@ def run_pair_alignment (seq, blast_db, e_value_min = 1, bitscore_cutoff = 50.0):
 	"""
 	
 	#First pass cutoff with BLAST alignments
-	if verbose: print "Running BLASTp for {} ...".format(seq.name())
+	if verbose: print "[DETECT]: Running BLASTp for {} ...".format(seq.name())
 	p = subprocess.Popen(("blastp", "-query", "-", 
 					"-out", "-",
 					"-db", blast_db,
 					"-outfmt", "6 sseqid bitscore",
 					"-max_target_seqs", "100000",
+					"-num_threads",str(num_threads),
 					"-evalue", str(e_value_min)),
 				stdin=subprocess.PIPE,	
 				stdout=subprocess.PIPE)
 	stdout,stderr = p.communicate(seq.data)
 	
-
-	#Retrive reporesentations of the aligned sequences
-	with open("blast_hits","a") as blast_hits:
+	with open("blast_hits","w") as blast_hits:
 		
 		blast_hit_list = list()	
 		for line in stdout.split("\n"):
@@ -105,7 +104,11 @@ def run_pair_alignment (seq, blast_db, e_value_min = 1, bitscore_cutoff = 50.0):
 					blast_hit_list.append(seq_id)
 		blast_hit_ids = "\n".join(blast_hit_list)
 			
-		if verbose: print "Found {} hits for {} ...".format(len(blast_hit_ids),seq.name())	
+		if verbose: print "[DETECT]: Found {} hits for {} ...".format(len(blast_hit_ids),seq.name())	
+		
+		#stop if nothing found
+		if len(blast_hit_ids) == 0:
+			return list()
 		
 		p = subprocess.Popen(("blastdbcmd", "-db", blast_db,
 							"-entry_batch", "-"),
@@ -115,7 +118,7 @@ def run_pair_alignment (seq, blast_db, e_value_min = 1, bitscore_cutoff = 50.0):
 		stdout,stderr = p.communicate(blast_hit_ids)
 		blast_hits.write(stdout)
 
-	if verbose: print "Running Needleman-Wunch alignments for {} ...".format(seq.name())
+	if verbose: print "[DETECT]: Running Needleman-Wunch alignments for {} ...".format(seq.name())
 
 	#Run Needleman-Wunch alignment on the results of the BLAST search
 	p = subprocess.Popen(("needle", "-filter",
@@ -277,21 +280,29 @@ if __name__=="__main__":
 	parser.add_argument("--tabular_output",help="Print output in tab-separated form",action="store_true")
 	parser.add_argument("--verbose",help="Print verbose output",action="store_true")
 	parser.add_argument("--sort_output",help="Sort the prediction probabiliites",action="store_true")
+	parser.add_argument("--num_threads",type=int,help="Number of threads used by BLASTp")
 	
 	args = parser.parse_args()
 
 	verbose = args.verbose
 	sequences = split_fasta(args.target_file)
+	if verbose: print "Found {} sequences in file.".format(len(sequences))
 	blast_db = "data/uniprot_sprot.fsa"
 	
 	final_predictions = list()
 
 	connection = sqlite3.connect("data/detect.db")
-	for seq in sequences:
-		identification = Identification(seq.name())
-		identification.hypotheses = run_pair_alignment(seq,blast_db)
+	for i,seq in enumerate(sequences):
 		
-		if verbose: print "Running density estimations for {} ...".format(seq.name())
+		if verbose: print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
+		identification = Identification(seq.name())
+		identification.hypotheses = run_pair_alignment(seq,blast_db,args.num_threads)
+		
+		if not identification.hypotheses:
+			if verbose: print "[DETECT]: No BLASTp hits for {}".format(seq.name())
+			continue
+
+		if verbose: print "[DETECT]: Running density estimations for {} ...".format(seq.name())
 		for hypothesis in identification.hypotheses:
 
 			probability = calculate_probability(hypothesis,connection)
@@ -310,6 +321,7 @@ if __name__=="__main__":
 			identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
 		
 		final_predictions.append(identification)
+		if verbose: print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
 	
 	if (args.output_file):	
 		output = open(args.output_file,"w")
