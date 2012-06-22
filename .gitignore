@@ -2,8 +2,7 @@
 *.py[co]
 
 #Vim
-.swp
-.README.md.swp
+*.swp
 
 #OSX
 .DS_Store
