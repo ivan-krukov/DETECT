@@ -53,10 +53,10 @@ class Identification:
 		self.hypotheses = list()
 		self.predictions = defaultdict(self.__one)
 
-	"""A callable function to initiate new values in a defaultdict to integer 1
+	"""A callable function to initiate new values in a defaultdict to float 1
 	"""
 	def __one(self):
-		return 1
+		return 1.0
 
 class Hypothesis:
 	"""Represents a single alignemnt result with an associated probability, as calculted using the Bayes theorem.
@@ -67,11 +67,11 @@ class Hypothesis:
 		self.score = score
 		self.ec = "unknown"
 		self.probability= 0.0
-
+verbose=False
 zero_density = 1e-10
 """Small number that is used as zero"""
 
-def run_pair_alignment (seq, blast_db, e_value_min = 1):
+def run_pair_alignment (seq, blast_db, e_value_min = 1, bitscore_cutoff = 50.0):
 	"""Core alignment routine.
 	1) Takes a single sequence, acquires multiple BLASTp alignemnts to the swissprot enzyme database.
 	2) Canonical sequences of the resutls from (1) are retrieved with blastdbcmd
@@ -80,28 +80,33 @@ def run_pair_alignment (seq, blast_db, e_value_min = 1):
 	"""
 	
 	#First pass cutoff with BLAST alignments
+	if verbose: print "Running BLASTp for {} ...".format(seq.name())
 	p = subprocess.Popen(("blastp", "-query", "-", 
 					"-out", "-",
 					"-db", blast_db,
-					"-outfmt", "6 sseqid",
+					"-outfmt", "6 sseqid bitscore",
 					"-max_target_seqs", "100000",
 					"-evalue", str(e_value_min)),
 				stdin=subprocess.PIPE,	
 				stdout=subprocess.PIPE)
 	stdout,stderr = p.communicate(seq.data)
-		
+	
+
 	#Retrive reporesentations of the aligned sequences
 	with open("blast_hits","a") as blast_hits:
 		
 		blast_hit_list = list()	
 		for line in stdout.split("\n"):
 			if not line in whitespace:
+				swissprot_id,bitscore = line.split("\t")
 				#sprot identifiers are sp|<ID>|<extra>
-				seq_id = line.split("|")[1]
-				blast_hit_list.append(seq_id)
+				seq_id = swissprot_id.split("|")[1]
+				if float(bitscore) > bitscore_cutoff:	
+					blast_hit_list.append(seq_id)
 		blast_hit_ids = "\n".join(blast_hit_list)
 			
-
+		if verbose: print "Found {} hits for {} ...".format(len(blast_hit_ids),seq.name())	
+		
 		p = subprocess.Popen(("blastdbcmd", "-db", blast_db,
 							"-entry_batch", "-"),
 						stdout=subprocess.PIPE,
@@ -109,6 +114,8 @@ def run_pair_alignment (seq, blast_db, e_value_min = 1):
 		
 		stdout,stderr = p.communicate(blast_hit_ids)
 		blast_hits.write(stdout)
+
+	if verbose: print "Running Needleman-Wunch alignments for {} ...".format(seq.name())
 
 	#Run Needleman-Wunch alignment on the results of the BLAST search
 	p = subprocess.Popen(("needle", "-filter",
@@ -121,7 +128,6 @@ def run_pair_alignment (seq, blast_db, e_value_min = 1):
 		
 	stdout,stderr = p.communicate(seq.fasta())
 	os.remove("blast_hits")
-
 	return parse_needle_results(stdout)
 		
 
@@ -194,12 +200,10 @@ def parse_needle_results (needle_results):
 			hit = fields[1]
 			#Score is printed in brackets - take them off, parse to float
 			score = float(fields[3][1:-1])
+			
 			h = Hypothesis(hit,score)
 			results.append(h)
 	return results
-
-def remove_self_hits(query_file, species):
-	pass
 
 def calculate_probability (hypothesis,db_connection):
 	
@@ -254,7 +258,7 @@ def calculate_probability (hypothesis,db_connection):
 			probability = zero_density
 		else:
 			positive_hit = prior * positive
-			probability = positive_hit / (positive_hit + ((1-prior) * negative ))
+			probability = positive_hit / (positive_hit + ((1.0-prior) * negative ))
 
 		hypothesis.probability = probability
 	else:
@@ -270,13 +274,13 @@ if __name__=="__main__":
 	
 	parser.add_argument("target_file",type=str,help="Path to the file containing the target FASTA sequence(s)")
 	parser.add_argument("--output_file",type=str,help="Path of the file to contain the output of the predictions")
-	parser.add_argument("--query_species",type=str,help="Species of the target organism.")
 	parser.add_argument("--tabular_output",help="Print output in tab-separated form",action="store_true")
 	parser.add_argument("--verbose",help="Print verbose output",action="store_true")
 	parser.add_argument("--sort_output",help="Sort the prediction probabiliites",action="store_true")
 	
 	args = parser.parse_args()
 
+	verbose = args.verbose
 	sequences = split_fasta(args.target_file)
 	blast_db = "data/uniprot_sprot.fsa"
 	
@@ -287,14 +291,15 @@ if __name__=="__main__":
 		identification = Identification(seq.name())
 		identification.hypotheses = run_pair_alignment(seq,blast_db)
 		
+		if verbose: print "Running density estimations for {} ...".format(seq.name())
 		for hypothesis in identification.hypotheses:
 
 			probability = calculate_probability(hypothesis,connection)
 			if not hypothesis.ec == "unknown":
-				identification.predictions[hypothesis.ec] *= (1-probability)
+				identification.predictions[hypothesis.ec] *= (1.0-probability)
 		
 		for ec,probability in identification.predictions.items():
-			cumulative = 1 - probability
+			cumulative = 1.0 - probability
 			if (cumulative > zero_density):
 				identification.predictions[ec] = cumulative
 			else:
@@ -311,16 +316,16 @@ if __name__=="__main__":
 	else:
 		output = stdout
 	if args.tabular_output:
-		output.write("# ID\tEC\tprobability #\n")
+		output.write("ID\tEC\tprobability\n")
 		for identification in final_predictions:
 			for ec in identification.predictions:
 				output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\n".format(seq_id=identification.query_id,pred_ec=ec,prob=identification.predictions[ec]))
 	else:
 		for identification in final_predictions:
-			output.write("DETECT predictions for {}:\n".format(identification.query_id))
-			output.write("Predicted EC number:  |  Cumulative probability of identification:\n")
+			output.write("{:^48}\n".format("DETECT report for {}".format(identification.query_id)))
+			output.write("Predicted EC number:  |  Cumulative probability:\n")
 			for ec in identification.predictions:
-				output.write("{pred_ec:^20}  |  {prob:^42.3e}\n".format(pred_ec=ec,prob=identification.predictions[ec]))
+				output.write("{pred_ec:^20}  |  {prob:^23.3e}\n".format(pred_ec=ec,prob=identification.predictions[ec]))
 
 	output.close()	
 	connection.close()
