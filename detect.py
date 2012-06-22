@@ -67,6 +67,9 @@ class Hypothesis:
 		self.ec = "unknown"
 		self.probability= 0.0
 
+zero_density = 1e-10
+"""A small number used as zero"""
+
 def run_pair_alignment (seq, blast_db, e_value_min = 1):
 	"""Core alignment routine.
 	1) Takes a single sequence, acquires multiple BLASTp alignemnts to the swissprot enzyme database.
@@ -247,7 +250,7 @@ def calculate_probability (hypothesis,db_connection):
 		#probability = 0
 
 		if positive == 0 and negative == 0:
-			probability = 1e-8
+			probability = zero_density
 		else:
 			positive_hit = prior * positive
 			probability = positive_hit / (positive_hit + ((1-prior) * negative ))
@@ -288,8 +291,12 @@ if __name__=="__main__":
 			if not hypothesis.ec == "unknown":
 				identification.predictions[hypothesis.ec] *= (1-probability)
 		
-		for ec in identification.predictions:
-			identification.predictions[ec] = 1 - identification.predictions[ec]
+		for ec,probability in identification.predictions.items():
+			cumulative = 1 - probability
+			if (cumulative > zero_density):
+				identification.predictions[ec] = cumulative
+			else:
+				del identification.predictions[ec]
 		
 		#sort dict by values	
 		identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
@@ -304,7 +311,6 @@ if __name__=="__main__":
 				print "{seq_id}\t{pred_ec}\t{prob:.3e}".format(seq_id=identification.query_id,pred_ec=ec,prob=identification.predictions[ec])
 	else:
 		for identification in final_predictions:
-			print "-"*67
 			print "DETECT predictions for {}:".format(identification.query_id)
 			print "Predicted EC number:  |  Cumulative probability of identification:"
 			for ec in identification.predictions:
