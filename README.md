@@ -1,7 +1,5 @@
-DETECT
+DETECT - a Density Estimation Tool for Enzyme CassificaTion
 ======
-
-#DETECT - a Density Estimation Tool for Enzyme CassificaTion#
 
 Original publication by <a href="http://bioinformatics.oxfordjournals.org/content/26/14/1690">Hung et al., 2010</a>
 
