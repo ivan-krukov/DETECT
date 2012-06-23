@@ -8,6 +8,7 @@ from string import whitespace
 from sys import stdout
 from argparse import ArgumentParser
 from operator import itemgetter
+import gc
 from collections import defaultdict, OrderedDict
 
 
@@ -71,7 +72,7 @@ verbose=False
 zero_density = 1e-10
 """Small number that is used as zero"""
 
-def run_pair_alignment (seq, blast_db, num_threads = 1, e_value_min = 1, bitscore_cutoff = 50.0):
+def run_pair_alignment (seq, blast_db, num_threads = 1, e_value_min = 1, bitscore_cutoff = 0.0):
 	"""Core alignment routine.
 	1) Takes a single sequence, acquires multiple BLASTp alignemnts to the swissprot enzyme database.
 	2) Canonical sequences of the resutls from (1) are retrieved with blastdbcmd
@@ -270,7 +271,10 @@ def calculate_probability (hypothesis,db_connection):
 
 	return probability
 
-
+def write_mem_log():
+	
+	p = subprocess.Popen("date '+%H:%M:%S' >> mem_usage.log; top -l 1 -s 0 -stats command,rsize | grep -i python >> mem_usage.log",shell=True)
+	
 
 if __name__=="__main__":
 	parser = ArgumentParser(description="DETECT - Density Estimation Tool for Enzyme ClassificaTion. Version 2.0. June 2012")
@@ -285,6 +289,7 @@ if __name__=="__main__":
 	args = parser.parse_args()
 
 	verbose = args.verbose
+	num_threads = args.num_threads if args.num_threads else 1
 	sequences = split_fasta(args.target_file)
 	if verbose: print "Found {} sequences in file.".format(len(sequences))
 	blast_db = "data/uniprot_sprot.fsa"
@@ -296,7 +301,7 @@ if __name__=="__main__":
 		
 		if verbose: print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
 		identification = Identification(seq.name())
-		identification.hypotheses = run_pair_alignment(seq,blast_db,args.num_threads)
+		identification.hypotheses = run_pair_alignment(seq,blast_db,num_threads)
 		
 		if not identification.hypotheses:
 			if verbose: print "[DETECT]: No BLASTp hits for {}".format(seq.name())
@@ -322,7 +327,9 @@ if __name__=="__main__":
 		
 		final_predictions.append(identification)
 		if verbose: print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
-	
+		gc.collect()
+		write_mem_log()	
+		
 	if (args.output_file):	
 		output = open(args.output_file,"w")
 	else:
