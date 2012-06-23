@@ -71,7 +71,7 @@ verbose=False
 zero_density = 1e-10
 """Small number that is used as zero"""
 
-def run_pair_alignment (seq, blast_db, num_threads = 1, e_value_min = 1, bitscore_cutoff = 0.0):
+def run_pair_alignment (seq, blast_db, num_threads = 1, e_value_min = 1, bitscore_cutoff = 50.0):
 	"""Core alignment routine.
 	1) Takes a single sequence, acquires multiple BLASTp alignemnts to the swissprot enzyme database.
 	2) Canonical sequences of the resutls from (1) are retrieved with blastdbcmd
