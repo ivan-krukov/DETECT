@@ -8,7 +8,6 @@ from string import whitespace
 from sys import stdout
 from argparse import ArgumentParser
 from operator import itemgetter
-import gc
 from collections import defaultdict, OrderedDict
 
 
@@ -255,9 +254,6 @@ def calculate_probability (hypothesis,db_connection):
 		else:
 			negative = 0
 
-
-		#probability = 0
-
 		if positive == 0 and negative == 0:
 			probability = zero_density
 		else:
@@ -270,10 +266,6 @@ def calculate_probability (hypothesis,db_connection):
 
 
 	return probability
-
-def write_mem_log():
-	
-	p = subprocess.Popen("date '+%H:%M:%S' >> mem_usage.log; top -l 1 -s 0 -stats command,rsize | grep -i python >> mem_usage.log",shell=True)
 	
 
 if __name__=="__main__":
@@ -327,8 +319,6 @@ if __name__=="__main__":
 		
 		final_predictions.append(identification)
 		if verbose: print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
-		gc.collect()
-		write_mem_log()	
 		
 	if (args.output_file):	
 		output = open(args.output_file,"w")
