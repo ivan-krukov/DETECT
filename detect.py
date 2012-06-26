@@ -71,7 +71,7 @@ verbose=False
 zero_density = 1e-10
 """Small number that is used as zero"""
 
-def run_pair_alignment (seq, blast_db, num_threads = 1, e_value_min = 1, bitscore_cutoff = 50.0):
+def run_pair_alignment (seq, blast_db, num_threads, e_value_min, bitscore_cutoff):
 	"""Core alignment routine.
 	1) Takes a single sequence, acquires multiple BLASTp alignemnts to the swissprot enzyme database.
 	2) Canonical sequences of the resutls from (1) are retrieved with blastdbcmd
@@ -277,11 +277,16 @@ if __name__=="__main__":
 	parser.add_argument("--verbose",help="Print verbose output",action="store_true")
 	parser.add_argument("--sort_output",help="Sort the prediction probabiliites",action="store_true")
 	parser.add_argument("--num_threads",type=int,help="Number of threads used by BLASTp")
+	parser.add_argument("--bit_score",type=float,help="The cutoff for BLASTp alignment bitscore")
+	parser.add_argument("--e_value",type=float,help="The cutoff for BLASTp alignment E-value")
 	
 	args = parser.parse_args()
 
 	verbose = args.verbose
 	num_threads = args.num_threads if args.num_threads else 1
+	bit_score = args.bit_score if args.bit_score else 50
+	e_value = args.e_value if args.e_value else 1
+	
 	sequences = split_fasta(args.target_file)
 	if verbose: print "Found {} sequences in file.".format(len(sequences))
 	blast_db = "data/uniprot_sprot.fsa"
@@ -293,7 +298,7 @@ if __name__=="__main__":
 		
 		if verbose: print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
 		identification = Identification(seq.name())
-		identification.hypotheses = run_pair_alignment(seq,blast_db,num_threads)
+		identification.hypotheses = run_pair_alignment(seq,blast_db,num_threads,e_value,bit_score)
 		
 		if not identification.hypotheses:
 			if verbose: print "[DETECT]: No BLASTp hits for {}".format(seq.name())
