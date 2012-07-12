@@ -78,7 +78,7 @@ def run_pair_alignment (seq, blast_db, num_threads, e_value_min, bitscore_cutoff
 	"""
 	
 	#First pass cutoff with BLAST alignments
-	if verbose: print "[DETECT]: Running BLASTp for {} ...".format(seq.name())
+	if verbose: print("[DETECT]: Running BLASTp for {} ...".format(seq.name()))
 	p = subprocess.Popen(("blastp", "-query", "-", 
 					"-out", "-",
 					"-db", blast_db,
@@ -102,7 +102,7 @@ def run_pair_alignment (seq, blast_db, num_threads, e_value_min, bitscore_cutoff
 					blast_hit_list.append(seq_id)
 		blast_hit_ids = "\n".join(blast_hit_list)
 			
-		if verbose: print "[DETECT]: Found {} hits for {} ...".format(len(blast_hit_ids),seq.name())
+		if verbose: print("[DETECT]: Found {} hits for {} ...".format(len(blast_hit_ids),seq.name()))
 		
 		#stop if nothing found
 		if len(blast_hit_ids) == 0:
@@ -116,7 +116,7 @@ def run_pair_alignment (seq, blast_db, num_threads, e_value_min, bitscore_cutoff
 		stdout,stderr = p.communicate(blast_hit_ids)
 		blast_hits.write(stdout)
 
-	if verbose: print "[DETECT]: Running Needleman-Wunch alignments for {} ...".format(seq.name())
+	if verbose: print("[DETECT]: Running Needleman-Wunch alignments for {} ...".format(seq.name()))
 
 	#Run Needleman-Wunch alignment on the results of the BLAST search
 	p = subprocess.Popen(("needle", "-filter",
@@ -285,7 +285,7 @@ if __name__=="__main__":
 	e_value = args.e_value if args.e_value else 1
 	
 	sequences = split_fasta(args.target_file)
-	if verbose: print "Found {} sequences in file.".format(len(sequences))
+	if verbose: print("Found {} sequences in file.".format(len(sequences)))
 	blast_db = "data/uniprot_sprot.fsa"
 	
 	final_predictions = list()
@@ -293,22 +293,22 @@ if __name__=="__main__":
 	connection = sqlite3.connect("data/detect.db")
 	for i,seq in enumerate(sequences):
 		
-		if verbose: print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
+		if verbose: print("[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences)))
 		identification = Identification(seq.name())
 		identification.hypotheses = run_pair_alignment(seq,blast_db,num_threads,e_value,bit_score)
 		
 		if not identification.hypotheses:
-			if verbose: print "[DETECT]: No BLASTp hits for {}".format(seq.name())
+			if verbose: print("[DETECT]: No BLASTp hits for {}".format(seq.name()))
 			continue
 
-		if verbose: print "[DETECT]: Running density estimations for {} ...".format(seq.name())
+		if verbose: print("[DETECT]: Running density estimations for {} ...".format(seq.name()))
 		for hypothesis in identification.hypotheses:
 
 			probability = calculate_probability(hypothesis,connection)
 			if not hypothesis.ec == "unknown":
 				identification.predictions[hypothesis.ec] *= (1.0-probability)
 		
-		for ec,probability in identification.predictions.items():
+		for ec,probability in list(identification.predictions.items()):
 			cumulative = 1.0 - probability
 			if (cumulative > zero_density):
 				identification.predictions[ec] = cumulative
@@ -317,10 +317,10 @@ if __name__=="__main__":
 		
 		#sort dict by values
 		if (args.sort_output):
-			identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
+			identification.predictions = OrderedDict(sorted(iter(identification.predictions.items()),key=itemgetter(1),reverse=True))
 		
 		final_predictions.append(identification)
-		if verbose: print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
+		if verbose: print("[DETECT]: Identified {} predictions for {}".format(len(list(identification.predictions.keys())),seq.name()))
 		
 	if (args.output_file):
 		output = open(args.output_file,"w")
