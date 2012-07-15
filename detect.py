@@ -278,6 +278,7 @@ if __name__=="__main__":
 	parser.add_argument("--e_value",type=float,help="The cutoff for BLASTp alignment E-value")
 	
 	args = parser.parse_args()
+	script_path = os.path.dirname(os.path.realpath(__file__))
 
 	verbose = args.verbose
 	num_threads = args.num_threads if args.num_threads else 1
@@ -286,11 +287,11 @@ if __name__=="__main__":
 	
 	sequences = split_fasta(args.target_file)
 	if verbose: print "Found {} sequences in file.".format(len(sequences))
-	blast_db = "data/uniprot_sprot.fsa"
+	blast_db = script_path+"/data/uniprot_sprot.fsa"
 	
 	final_predictions = list()
 
-	connection = sqlite3.connect("data/detect.db")
+	connection = sqlite3.connect(script_path+"/data/detect.db")
 	for i,seq in enumerate(sequences):
 		
 		if verbose: print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
