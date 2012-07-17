@@ -11,11 +11,11 @@ Improvements mainly include lowering the nubmer of file system operations and us
 
 ##Examples##
 Sample run
-	python detect.py --verbose target_sequence.fasta
+<pre><code>python detect.py --verbose target_sequence.fasta</code></pre>
 Running DETECT for a large sequence archive
-	python detect.py target_seqeunces.fasta -tabular_output -output_file predictions.tsv
+<pre><code>python detect.py target_seqeunces.fasta -tabular_output -output_file predictions.tsv</code></pre>
 Built-in help available
-	python detect.py --help
+<pre><code>python detect.py --help</code></pre>
 
 ##Dependencies###
 + <a href="http://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download">NCBI BLAST</a>
