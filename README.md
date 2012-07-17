@@ -9,12 +9,12 @@ This is the python implementation that includes several optimizations compared t
 
 Improvements mainly include lowering the nubmer of file system operations and using an SQLite database for density estimation tables.
 
-Examples:
-Sample run:
+##Examples##
+Sample run
 	python detect.py --verbose target_sequence.fasta
-Running DETECT for a large sequence archive:
+Running DETECT for a large sequence archive
 	python detect.py target_seqeunces.fasta -tabular_output -output_file predictions.tsv
-Built-in help available:
+Built-in help available
 	python detect.py --help
 
 ##Dependencies###
