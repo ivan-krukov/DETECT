@@ -13,7 +13,7 @@ Improvements mainly include lowering the nubmer of file system operations and us
 Sample run
 <pre><code>python detect.py --verbose target_sequence.fasta</code></pre>
 Running DETECT for a large sequence archive
-<pre><code>python detect.py target_seqeunces.fasta -tabular_output -output_file predictions.tsv</code></pre>
+<pre><code>python detect.py target_seqeunces.fasta --tabular_output --output_file predictions.tsv</code></pre>
 Built-in help available
 <pre><code>python detect.py --help</code></pre>
 
