@@ -50,6 +50,7 @@ class Identification:
 		self.query_id = query_id
 		self.hypotheses = list()
 		self.predictions = defaultdict(self.__one)
+		self.prediction_count = defaultdict(int)
 
 	"""A callable function to initiate new values in a defaultdict to float 1
 	"""
@@ -200,7 +201,6 @@ def parse_needle_results (needle_results):
 			hit = fields[1]
 			#Score is printed in brackets - take them off, parse to float
 			score = float(fields[3][1:-1])
-			
 			h = Hypothesis(hit,score)
 			results.append(h)
 	return results
@@ -294,21 +294,25 @@ if __name__=="__main__":
 	connection = sqlite3.connect(script_path+"/data/detect.db")
 	for i,seq in enumerate(sequences):
 		
-		if verbose: print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
+		if verbose: 
+			print "[DETECT]: Analyzing {} ({}/{}) ...".format(seq.name(),i+1,len(sequences))
 		identification = Identification(seq.name())
 		identification.hypotheses = run_pair_alignment(seq,blast_db,num_threads,e_value,bit_score)
 		
 		if not identification.hypotheses:
-			if verbose: print "[DETECT]: No BLASTp hits for {}".format(seq.name())
+			if verbose: 
+				print "[DETECT]: No BLASTp hits for {}".format(seq.name())
 			continue
 
-		if verbose: print "[DETECT]: Running density estimations for {} ...".format(seq.name())
+		if verbose: 
+			print "[DETECT]: Running density estimations for {} ...".format(seq.name())
 		for hypothesis in identification.hypotheses:
 
 			probability = calculate_probability(hypothesis,connection)
-			if not hypothesis.ec == "unknown":
-				identification.predictions[hypothesis.ec] *= (1.0-probability)
-		
+			if not (hypothesis.ec == "unknown" or hypothesis.ec == "2.7.11.1" or hypothesis.ec == "2.7.7.6" or hypothesis.ec == "2.7.13.3"):
+				identification.predictions[hypothesis.ec] *= (1.0-probability)	
+				identification.prediction_count[hypothesis.ec] += 1
+
 		for ec,probability in identification.predictions.items():
 			cumulative = 1.0 - probability
 			if (cumulative > zero_density):
@@ -321,23 +325,32 @@ if __name__=="__main__":
 			identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
 		
 		final_predictions.append(identification)
-		if verbose: print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
+		if verbose: 
+			print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
 		
 	if (args.output_file):
 		output = open(args.output_file,"w")
 	else:
 		output = stdout
 	if args.tabular_output:
-		output.write("ID\tEC\tprobability\n")
+		output.write("ID\tEC\tprobability\tpositive_hits\tnegative_hits\n")
 		for identification in final_predictions:
 			for ec in identification.predictions:
-				output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\n".format(seq_id=identification.query_id,pred_ec=ec,prob=identification.predictions[ec]))
+				output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
+							seq_id=identification.query_id,
+							pred_ec=ec,
+							prob=identification.predictions[ec],
+							pos_hits=identification.prediction_count[ec],
+							neg_hits= len(identification.hypotheses)-identification.prediction_count[ec]))
 	else:
 		for identification in final_predictions:
 			output.write("{:^48}\n".format("DETECT report for {}".format(identification.query_id)))
-			output.write("Predicted EC number:  |  Cumulative probability:\n")
+			output.write("Predicted EC number:  |  Cumulative probability:  |  Positive Hits:\n")
 			for ec in identification.predictions:
-				output.write("{pred_ec:^20}  |  {prob:^23.3e}\n".format(pred_ec=ec,prob=identification.predictions[ec]))
+				output.write("{pred_ec:^20}  |  {prob:^23.3e}  |  {pos_hits:^16}\n".format(
+							pred_ec=ec,
+							prob=identification.predictions[ec],
+							pos_hits=identification.prediction_count[ec]))
 
 	output.close()
 	connection.close()
