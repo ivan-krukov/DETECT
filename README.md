@@ -22,6 +22,7 @@ Built-in help available
 + <a href="http://emboss.sourceforge.net/download/">EMBOSS suite</a>
 + <a href="http://www.sqlite.org/download.html">SQLite3</a>
 + <a href="http://www.python.org/">python2.7.3</a>
+
 ##Required python modules##
 + argparse
 + sqlite3
