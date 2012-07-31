@@ -270,9 +270,7 @@ if __name__=="__main__":
 	
 	parser.add_argument("target_file",type=str,help="Path to the file containing the target FASTA sequence(s)")
 	parser.add_argument("--output_file",type=str,help="Path of the file to contain the output of the predictions")
-	parser.add_argument("--tabular_output",help="Print output in tab-separated form",action="store_true")
 	parser.add_argument("--verbose",help="Print verbose output",action="store_true")
-	parser.add_argument("--sort_output",help="Sort the prediction probabiliites",action="store_true")
 	parser.add_argument("--num_threads",type=int,help="Number of threads used by BLASTp")
 	parser.add_argument("--bit_score",type=float,help="The cutoff for BLASTp alignment bitscore")
 	parser.add_argument("--e_value",type=float,help="The cutoff for BLASTp alignment E-value")
@@ -292,6 +290,13 @@ if __name__=="__main__":
 	final_predictions = list()
 
 	connection = sqlite3.connect(script_path+"/data/detect.db")
+	if (args.output_file):
+		output = open(args.output_file,"w")
+	else:
+		output = stdout
+	
+	output.write("ID\tEC\tprobability\tpositive_hits\tnegative_hits\n")
+
 	for i,seq in enumerate(sequences):
 		
 		if verbose: 
@@ -312,45 +317,20 @@ if __name__=="__main__":
 			if not (hypothesis.ec == "unknown" or hypothesis.ec == "2.7.11.1" or hypothesis.ec == "2.7.7.6" or hypothesis.ec == "2.7.13.3"):
 				identification.predictions[hypothesis.ec] *= (1.0-probability)	
 				identification.prediction_count[hypothesis.ec] += 1
-
+		
 		for ec,probability in identification.predictions.items():
 			cumulative = 1.0 - probability
 			if (cumulative > zero_density):
 				identification.predictions[ec] = cumulative
 			else:
 				del identification.predictions[ec]
-		
-		#sort dict by values
-		if (args.sort_output):
-			identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
-		
-		final_predictions.append(identification)
-		if verbose: 
-			print "[DETECT]: Identified {} predictions for {}".format(len(identification.predictions.keys()),seq.name())
-		
-	if (args.output_file):
-		output = open(args.output_file,"w")
-	else:
-		output = stdout
-	if args.tabular_output:
-		output.write("ID\tEC\tprobability\tpositive_hits\tnegative_hits\n")
-		for identification in final_predictions:
-			for ec in identification.predictions:
-				output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
-							seq_id=identification.query_id,
-							pred_ec=ec,
-							prob=identification.predictions[ec],
-							pos_hits=identification.prediction_count[ec],
-							neg_hits= len(identification.hypotheses)-identification.prediction_count[ec]))
-	else:
-		for identification in final_predictions:
-			output.write("{:^48}\n".format("DETECT report for {}".format(identification.query_id)))
-			output.write("Predicted EC number:  |  Cumulative probability:  |  Positive Hits:\n")
-			for ec in identification.predictions:
-				output.write("{pred_ec:^20}  |  {prob:^23.3e}  |  {pos_hits:^16}\n".format(
-							pred_ec=ec,
-							prob=identification.predictions[ec],
-							pos_hits=identification.prediction_count[ec]))
-
+			
+		for ec in identification.predictions:
+			output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
+						seq_id=identification.query_id,
+						pred_ec=ec,
+						prob=identification.predictions[ec],
+						pos_hits=identification.prediction_count[ec],
+						neg_hits= len(identification.hypotheses)-identification.prediction_count[ec]))
 	output.close()
 	connection.close()
