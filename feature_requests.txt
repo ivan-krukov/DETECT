@@ -1,0 +1,7 @@
+Need a top predictions file
+It has to show the top 5 repdictions over 0.2
+    top 5 - have a list of predictions for any enzyme
+    file - only write the top predictions if FILE is specified
+	otherwise, write all to (just the original) to STDOUT
+    maybe you should have an option "write top predictions to file", TRUE by default
+	this will just add "_top_predictions" to the output file name
