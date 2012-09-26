@@ -66,6 +66,8 @@ class Hypothesis:
 		self.score = score
 		self.ec = "unknown"
 		self.probability= 0.0
+top_predictions_count = 5
+probability_cutoff = 0.2
 verbose=False
 zero_density = 1e-10
 """Small number that is used as zero"""
@@ -274,6 +276,7 @@ if __name__=="__main__":
 	parser.add_argument("--num_threads",type=int,help="Number of threads used by BLASTp")
 	parser.add_argument("--bit_score",type=float,help="The cutoff for BLASTp alignment bitscore")
 	parser.add_argument("--e_value",type=float,help="The cutoff for BLASTp alignment E-value")
+	parser.add_argument("--top_predictions_file",type=str,help="Path to the file that enumerates predictions with probability over 0.2")
 	
 	args = parser.parse_args()
 	script_path = os.path.dirname(os.path.realpath(__file__))
@@ -295,7 +298,12 @@ if __name__=="__main__":
 	else:
 		output = stdout
 	
-	output.write("ID\tEC\tprobability\tpositive_hits\tnegative_hits\n")
+	header = "ID\tEC\tprobability\tpositive_hits\tnegative_hits\n"
+	output.write(header)
+
+	if (args.top_predictions_file):
+	    top_predictions_file = open(args.top_predictions_file,"w")
+	    top_predictions_file.write(header)
 
 	for i,seq in enumerate(sequences):
 		
@@ -324,13 +332,29 @@ if __name__=="__main__":
 				identification.predictions[ec] = cumulative
 			else:
 				del identification.predictions[ec]
-			
+		
+
+		if (args.top_predictions_file):
+		    #sort
+		    identification.predictions = OrderedDict(sorted(identification.predictions.iteritems(),key=itemgetter(1),reverse=True))
+		    top_predictions = list()
+
 		for ec in identification.predictions:
-			output.write("{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
+			identification_entry = "{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
 						seq_id=identification.query_id,
 						pred_ec=ec,
 						prob=identification.predictions[ec],
 						pos_hits=identification.prediction_count[ec],
-						neg_hits= len(identification.hypotheses)-identification.prediction_count[ec]))
+						neg_hits= len(identification.hypotheses)-identification.prediction_count[ec])
+
+			if args.top_predictions_file and identification.predictions[ec] > probability_cutoff and len(top_predictions) < top_predictions_count:
+			    top_predictions.append(identification_entry)
+
+			output.write(identification_entry)
+	
+	if (args.top_predictions_file):
+	    for entry in top_predictions:
+		top_predictions_file.write(entry)
+	    top_predictions_file.close()
 	output.close()
 	connection.close()
