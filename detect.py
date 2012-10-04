@@ -340,21 +340,21 @@ if __name__=="__main__":
 		    top_predictions = list()
 
 		for ec in identification.predictions:
-			identification_entry = "{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
-						seq_id=identification.query_id,
-						pred_ec=ec,
-						prob=identification.predictions[ec],
-						pos_hits=identification.prediction_count[ec],
-						neg_hits= len(identification.hypotheses)-identification.prediction_count[ec])
+		    identification_entry = "{seq_id}\t{pred_ec}\t{prob:.3e}\t{pos_hits}\t{neg_hits}\n".format(
+		    			seq_id=identification.query_id,
+		    			pred_ec=ec,
+		    			prob=identification.predictions[ec],
+		    			pos_hits=identification.prediction_count[ec],
+		    			neg_hits= len(identification.hypotheses)-identification.prediction_count[ec])
 
-			if args.top_predictions_file and identification.predictions[ec] > probability_cutoff and len(top_predictions) < top_predictions_count:
-			    top_predictions.append(identification_entry)
+		    if args.top_predictions_file and identification.predictions[ec] > probability_cutoff and len(top_predictions) < top_predictions_count:
+		        top_predictions.append(identification_entry)
 
-			output.write(identification_entry)
+	    	output.write(identification_entry)
 	
-		    if (args.top_predictions_file):
-			    for entry in top_predictions:
-				top_predictions_file.write(entry)
+	        if (args.top_predictions_file):
+		    for entry in top_predictions:
+			top_predictions_file.write(entry)
 	if (args.top_predictions_file):
 	    top_predictions_file.close()
 	output.close()
