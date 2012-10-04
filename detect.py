@@ -352,9 +352,10 @@ if __name__=="__main__":
 
 			output.write(identification_entry)
 	
+		    if (args.top_predictions_file):
+			    for entry in top_predictions:
+				top_predictions_file.write(entry)
 	if (args.top_predictions_file):
-	    for entry in top_predictions:
-		top_predictions_file.write(entry)
 	    top_predictions_file.close()
 	output.close()
 	connection.close()
