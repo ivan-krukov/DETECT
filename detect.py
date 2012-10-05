@@ -350,7 +350,7 @@ if __name__=="__main__":
 		    if args.top_predictions_file and identification.predictions[ec] > probability_cutoff and len(top_predictions) < top_predictions_count:
 		        top_predictions.append(identification_entry)
 
-	    	output.write(identification_entry)
+		    output.write(identification_entry)
 	
 	        if (args.top_predictions_file):
 		    for entry in top_predictions:
