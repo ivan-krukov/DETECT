@@ -93,7 +93,7 @@ def run_pair_alignment (seq, blast_db, num_threads, e_value_min, bitscore_cutoff
 				stdout=subprocess.PIPE)
 	stdout,stderr = p.communicate(seq.data)
 	
-	with open("blast_hits"+seq.name,"w") as blast_hits:
+	with open("blast_hits_"+seq.name,"w") as blast_hits:
 		
 		blast_hit_list = list()	
 		for line in stdout.split("\n"):
@@ -131,7 +131,7 @@ def run_pair_alignment (seq, blast_db, num_threads, e_value_min, bitscore_cutoff
 				stdout=subprocess.PIPE)
 		
 	stdout,stderr = p.communicate(seq.fasta())
-	os.remove("blast_hits")
+	os.remove("blast_hits_"+seq.name)
 	return parse_needle_results(stdout)
 		
 
